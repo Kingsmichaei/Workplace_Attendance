@@ -1,12 +1,53 @@
+{% load static %}
+
 <!DOCTYPE html>
 <html>
 <head>
     <title>Dashboard</title>
+    
+ <link rel="stylesheet" href="{% static 'attendance/dashboard.css' %}" /> 
+ <style>
+    .dropdown-header {
+        cursor: pointer;
+        user-select: none;
+        padding: 10px;
+        background-color: #f9f9f9;
+        border-radius: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .dropdown-header:hover {
+        background-color: #f0f0f0;
+    }
+    
+    .dropdown-content {
+        display: none;
+        overflow: hidden;
+    }
+    
+    .dropdown-content.show {
+        display: block;
+    }
+    
+    .dropdown-arrow {
+        font-size: 14px;
+        transition: transform 0.3s;
+    }
+    
+    .dropdown-arrow.show {
+        transform: rotate(180deg);
+    }
+ </style>
+
 </head>
 
 
 <body>
-<h2>Welcome {{ request.user.username }}</h2>
+    <div class="container">
+
+<h1>Welcome {{ request.user.username }}</h1>
 
 <form method="POST">
     {% csrf_token %}
@@ -18,22 +59,109 @@
         <button name="clock_out">Clock Out</button>
     {% endif %}
 </form>
-
-<hr>
-
-<h3>Your Attendance History</h3>
-<ul>
-    {% for record in records %}
-        <li>
-            {{ record.date }} —
-            In: {{ record.clock_in }} |
-            Out: {{ record.clock_out }}
-        </li>
-    {% endfor %}
-</ul>
-
 <br>
-<a href="{% url 'logout' %}">Logout</a>
+
+<div class="section">
+<div class="dropdown-header" onclick="toggleDropdown(event)">
+    <h2 style="margin: 0;">Your Attendance History</h2>
+    <span class="dropdown-arrow">▼</span>
+</div>
+<div class="dropdown-content show" id="attendanceDropdown">
+    <table>
+        <tr>
+            <th>Date</th>
+            <th>Clock In</th>
+            <th>Clock Out</th>
+        </tr>
+        {% for record in records %}
+        <tr>
+            <td>{{ record.date }}</td>
+            <td>{{ record.clock_in }}</td>
+            <td>{{ record.clock_out }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="3">No attendance records found.</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+</div>
+<br>
+
+{% if request.user.is_superuser %}
+<div class="section">
+<h3>Staff List</h3>
+
+<table>
+    <tr>
+        <th>Username</th>
+        <th>Full Name</th>
+        <th>Attendance</th>
+        <th>Status</th>
+        <th>Action</th>
+        <th>Delete</th>
+    </tr>
+
+    {% for user in users %}
+    <tr>
+        <td>{{ user.username }}</td>
+        <td>{{ user.first_name }} {{ user.last_name }}</td>
+        <td>
+            <a class="btn" href="{% url 'staff_attendance' user.id %}">View Attendance</a>
+        </td>
+        <td>
+            {% if user.is_active %}
+                <span class="status-active">Active</span>
+            {% else %}
+                <span class="status-inactive">Inactive</span>
+            {% endif %}
+        </td>
+        <td>
+            {% if user.is_active %}
+                <a class="btn1"
+                 href="{% url 'deactivate_user' user.id %}"
+                   onclick="return confirm('Deactivate this user?')">
+                   Deactivate
+                </a>
+            {% else %}
+                <a class="btn2"
+                 href="{% url 'activate_user' user.id %}"
+                   onclick="return confirm('Activate this user?')">
+                  Activate
+                </a>
+            {% endif %}
+        </td>
+                <td>
+                        <a class="btn1"
+                         href="{% url 'delete_user' user.id %}"
+                             onclick="return confirm('Delete this user? This action cannot be undone.')">
+                             Delete
+                             </a>
+                </td>
+    </tr>
+    {% endfor %}
+</table>
+{% endif %}
+
+<br> <br>
+{% if request.user.is_superuser %}
+
+<a class="btn" href="{% url 'add_user' %}">Add New User</a>
+{% endif %}
+<script>
+    function toggleDropdown(event) {
+        const dropdown = document.getElementById('attendanceDropdown');
+        const arrow = event.currentTarget.querySelector('.dropdown-arrow');
+        dropdown.classList.toggle('show');
+        arrow.classList.toggle('show');
+    }
+</script>
+</div>
+ 
+<a class="link" href="{% url 'logout' %}">Logout</a>
+
+
 
 </body>
 </html>

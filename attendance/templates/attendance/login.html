@@ -1,12 +1,15 @@
+{% load static %}
 <!DOCTYPE html>
 <html>
 <head>
     <title>Login</title>
+    <link rel="stylesheet" href="{% static 'attendance/style.css' %}">
 </head>
 <body>
-    <h2>Employee Login</h2>
+    <div class="login-container">
+         <h2>Employee Login</h2>
 
-    <form method="POST" action="">
+      <form method="POST" action="">
         {% csrf_token %}
         <label for="username">Username</label>
         <input type="text" id="username" name="username" placeholder="username" required>
@@ -14,7 +17,13 @@
         <label for="password">Password</label>
         <input type="password" id="password" name="password" placeholder="password" required>
         <br><br>
-        <button type="submit">Login</button>
-    </form>
+        <div class="login-actions">
+            <button class="btn-small" type="submit">Login</button>
+            <a class="forgot-link" href="{% url 'password_reset' %}">Forgot password?</a>
+       </form>
+        </div>
+    </div>
+    
 </body>
 </html>
+ 
