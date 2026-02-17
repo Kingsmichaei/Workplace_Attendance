@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+</head>
+
+
+<body>
+<h2>Welcome {{ request.user.username }}</h2>
+
+<form method="POST">
+    {% csrf_token %}
+    {% if not attendance.clock_in %}
+        <button name="clock_in">Clock In</button>
+    {% endif %}
+
+    {% if attendance.clock_in and not attendance.clock_out %}
+        <button name="clock_out">Clock Out</button>
+    {% endif %}
+</form>
+
+<hr>
+
+<h3>Your Attendance History</h3>
+<ul>
+    {% for record in records %}
+        <li>
+            {{ record.date }} —
+            In: {{ record.clock_in }} |
+            Out: {{ record.clock_out }}
+        </li>
+    {% endfor %}
+</ul>
+
+<br>
+<a href="{% url 'logout' %}">Logout</a>
+
+</body>
+</html>
