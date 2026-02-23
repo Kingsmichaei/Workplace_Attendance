@@ -39,6 +39,193 @@
     .dropdown-arrow.show {
         transform: rotate(180deg);
     }
+
+    /* Facial Recognition Styles */
+    .facial-section {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        color: white;
+        margin: 20px 0;
+    }
+
+    .facial-section h3 {
+        color: black;
+        margin-top: 0;
+        margin-bottom: 15px;
+    }
+
+    .facial-buttons {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .btn-facial {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-facial-in {
+        background: #10b981;
+        color: white;
+    }
+
+    .btn-facial-in:hover:not(:disabled) {
+        background: #059669;
+    }
+
+    .btn-facial-out {
+        background: #ef4444;
+        color: white;
+    }
+
+    .btn-facial-out:hover:not(:disabled) {
+        background: #dc2626;
+    }
+
+    .btn-facial-register {
+        background: #f59e0b;
+        color: white;
+    }
+
+    .btn-facial-register:hover {
+        background: #d97706;
+    }
+
+    .btn-facial:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .facial-modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+    }
+
+    .facial-modal.show {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .facial-modal-content {
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        max-width: 500px;
+        width: 90%;
+        text-align: center;
+    }
+
+    .facial-modal-content video {
+        width: 100%;
+        max-width: 400px;
+        border-radius: 8px;
+        border: 2px solid #e0e0e0;
+        margin: 15px 0;
+    }
+
+    .modal-message {
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+        display: none;
+    }
+
+    .modal-message.success {
+        background: #d1fae5;
+        color: #065f46;
+        border: 1px solid #6ee7b7;
+    }
+
+    .modal-message.error {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fca5a5;
+    }
+
+    .modal-message.show {
+        display: block;
+    }
+
+    .modal-buttons {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+    }
+
+    .btn-modal {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+    .btn-verify {
+        background: #667eea;
+        color: white;
+    }
+
+    .btn-verify:hover {
+        background: #5568d3;
+    }
+
+    .btn-cancel {
+        background: #6b7280;
+        color: white;
+    }
+
+    .btn-cancel:hover {
+        background: #4b5563;
+    }
+
+    .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #667eea;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 10px;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        margin-top: 5px;
+    }
+
+    .status-registered {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .status-not-registered {
+        background: #fee2e2;
+        color: #991b1b;
+    }
  </style>
 
 </head>
@@ -52,14 +239,63 @@
 <form method="POST">
     {% csrf_token %}
     {% if not attendance.clock_in %}
-        <button name="clock_in">Clock In</button>
+        <button name="clock_in">Manual Clock In</button>
     {% endif %}
 
     {% if attendance.clock_in and not attendance.clock_out %}
-        <button name="clock_out">Clock Out</button>
+        <button name="clock_out">Manual Clock Out</button>
     {% endif %}
 </form>
 <br>
+
+<!-- Facial Recognition Section -->
+<div class="facial-section">
+    <h3>Facial Recognition Attendance</h3>
+    <div class="facial-buttons">
+        {% if not attendance.clock_in %}
+            <button class="btn-facial btn-facial-in" id="facialClockInBtn">
+                📷 Facial Clock In
+            </button>
+        {% else %}
+            <button class="btn-facial btn-facial-in" disabled>
+                ✓ Clocked In
+            </button>
+        {% endif %}
+
+        {% if attendance.clock_in and not attendance.clock_out %}
+            <button class="btn-facial btn-facial-out" id="facialClockOutBtn">
+                📷 Facial Clock Out
+            </button>
+        {% endif %}
+    </div>
+    <button class="btn-facial btn-facial-register" id="registerFaceBtn" title="Register or update your facial data">
+        ⚙️ Register Face
+    </button>
+    <div>
+        {% if request.user.face_data.face_registered %}
+            <span class="status-badge status-registered">✓ Face Registered</span>
+        {% else %}
+            <span class="status-badge status-not-registered">✗ Face Not Registered</span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Facial Recognition Modal -->
+<div id="facialModal" class="facial-modal">
+    <div class="facial-modal-content">
+        <h3 id="modalTitle">Facial Recognition</h3>
+        <div class="modal-message" id="modalMessage"></div>
+        <video id="facialVideo" autoplay playsinline></video>
+        <div id="loadingSpinner" style="display:none;">
+            <div class="spinner"></div>
+            <p>Processing...</p>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-modal btn-verify" id="verifyFaceBtn">Verify Face</button>
+            <button class="btn-modal btn-cancel" id="closeModalBtn">Cancel</button>
+        </div>
+    </div>
+</div>
 
 <div class="section">
 <div class="dropdown-header" onclick="toggleDropdown(event)">
@@ -72,16 +308,27 @@
             <th>Date</th>
             <th>Clock In</th>
             <th>Clock Out</th>
+            <th>Method</th>
         </tr>
         {% for record in records %}
         <tr>
             <td>{{ record.date }}</td>
             <td>{{ record.clock_in }}</td>
             <td>{{ record.clock_out }}</td>
+            <td>
+                <span style="font-size: 12px;">
+                    {% if record.clock_in %}
+                        In: {{ record.clock_in_method|upper }}
+                    {% endif %}
+                    {% if record.clock_out %}
+                        / Out: {{ record.clock_out_method|upper }}
+                    {% endif %}
+                </span>
+            </td>
         </tr>
         {% empty %}
         <tr>
-            <td colspan="3">No attendance records found.</td>
+            <td colspan="4">No attendance records found.</td>
         </tr>
         {% endfor %}
     </table>
@@ -156,6 +403,150 @@
         dropdown.classList.toggle('show');
         arrow.classList.toggle('show');
     }
+
+    // Facial Recognition
+    const facialModal = document.getElementById('facialModal');
+    const facialVideo = document.getElementById('facialVideo');
+    const facialClockInBtn = document.getElementById('facialClockInBtn');
+    const facialClockOutBtn = document.getElementById('facialClockOutBtn');
+    const registerFaceBtn = document.getElementById('registerFaceBtn');
+    const verifyFaceBtn = document.getElementById('verifyFaceBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const modalMessage = document.getElementById('modalMessage');
+    const modalTitle = document.getElementById('modalTitle');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+
+    let currentAction = null;
+    let facialStream = null;
+
+    // Open facial modal
+    async function openFacialModal(action) {
+        currentAction = action;
+        facialModal.classList.add('show');
+        modalTitle.textContent = action === 'clock_in' ? 'Facial Recognition - Clock In' : 'Facial Recognition - Clock Out';
+        modalMessage.classList.remove('show', 'success', 'error');
+        loadingSpinner.style.display = 'none';
+
+        try {
+            facialStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user' }
+            });
+            facialVideo.srcObject = facialStream;
+        } catch (err) {
+            showModalMessage('Error accessing camera: ' + err.message, 'error');
+        }
+    }
+
+    // Close facial modal
+    function closeFacialModal() {
+        facialModal.classList.remove('show');
+        currentAction = null;
+        
+        if (facialStream) {
+            facialStream.getTracks().forEach(track => track.stop());
+            facialStream = null;
+        }
+    }
+
+    // Verify face and perform action
+    async function verifyAndClockInOut() {
+        if (!facialVideo.readyState || !facialStream) {
+            showModalMessage('Camera not ready', 'error');
+            return;
+        }
+
+        loadingSpinner.style.display = 'block';
+        verifyFaceBtn.disabled = true;
+
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = facialVideo.videoWidth;
+            canvas.height = facialVideo.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(facialVideo, 0, 0);
+            
+            const imageData = canvas.toDataURL('image/jpeg');
+
+            const response = await fetch('{% url "facial_clock" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    action: currentAction,
+                    image: imageData
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showModalMessage('✓ ' + result.message, 'success');
+                setTimeout(() => {
+                    closeFacialModal();
+                    location.reload();
+                }, 2000);
+            } else {
+                showModalMessage('✗ ' + result.message, 'error');
+                loadingSpinner.style.display = 'none';
+                verifyFaceBtn.disabled = false;
+            }
+        } catch (error) {
+            showModalMessage('Error: ' + error.message, 'error');
+            loadingSpinner.style.display = 'none';
+            verifyFaceBtn.disabled = false;
+        }
+    }
+
+    function showModalMessage(msg, type) {
+        modalMessage.textContent = msg;
+        modalMessage.className = 'modal-message';
+        if (msg) {
+            modalMessage.classList.add(type, 'show');
+        }
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Event listeners
+    if (facialClockInBtn) {
+        facialClockInBtn.addEventListener('click', () => openFacialModal('clock_in'));
+    }
+    if (facialClockOutBtn) {
+        facialClockOutBtn.addEventListener('click', () => openFacialModal('clock_out'));
+    }
+    if (registerFaceBtn) {
+        registerFaceBtn.addEventListener('click', () => {
+            window.location.href = '{% url "register_face" %}';
+        });
+    }
+    if (verifyFaceBtn) {
+        verifyFaceBtn.addEventListener('click', verifyAndClockInOut);
+    }
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', closeFacialModal);
+    }
+
+    // Close modal when clicking outside
+    facialModal.addEventListener('click', (e) => {
+        if (e.target === facialModal) {
+            closeFacialModal();
+        }
+    });
 </script>
 </div>
  

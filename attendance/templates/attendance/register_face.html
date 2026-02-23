@@ -1,0 +1,401 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register Face</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f7;;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            max-width: 600px;
+            width: 100%;
+            justify-content: center;
+            align-content: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .camera-section {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        video, canvas {
+            width: 100%;
+            max-width: 350px;
+            height: auto;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            margin: 20px 0;
+            justify-self: center;
+            
+            
+        }
+
+        video {
+            display: block;
+            background: #000;
+        }
+
+        #canvas {
+            display: none;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-capture {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-capture:hover {
+            background: #5568d3;
+        }
+
+        .btn-capture:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-retake {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .btn-retake:hover {
+            background: #d97706;
+        }
+
+        .btn-confirm {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-confirm:hover {
+            background: #059669;
+        }
+
+        .btn-back {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-back:hover {
+            background: #4b5563;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+            display: none;
+        }
+
+        .message.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #6ee7b7;
+        }
+
+        .message.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
+        .message.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            text-align: center;
+            color: #666;
+            display: none;
+        }
+
+        .status.show {
+            display: block;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            border-right: 4px solid #3b82f6;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            color: #1e40af;
+        }
+
+        .info-box p {
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .already-registered {
+            background: #dcfce7;
+            color: #166534;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin: 20px 0 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Facial Recognition Registration</h1>
+        <p class="subtitle">Register your face for attendance tracking</p>
+
+        {% if face_registered %}
+        <div class="already-registered">
+            <strong>✓ Face Already Registered</strong>
+            <p>You can update your facial data by capturing new images below.</p>
+        </div>
+        {% endif %}
+
+        <div class="message" id="messageBox"></div>
+
+        <div class="info-box">
+            <p><strong>Instructions:</strong></p>
+            <ul style="margin-left: 20px; margin-top: 10px;">
+                <li>Make sure there is good lighting on your face</li>
+                <li>Keep your face centered in the camera view</li>
+                <li>Look directly at the camera</li>
+                <li>Remove glasses if possible, or ensure they're not reflecting light</li>
+            </ul>
+        </div>
+
+        <div class="camera-section">
+            <video id="video" autoplay></video>
+            <canvas id="canvas"></canvas>
+
+            <div class="button-group">
+                <button id="captureBtn" class="btn-capture">Capture Photo</button>
+                <button id="retakeBtn" class="btn-retake" style="display:none;">Retake</button>
+                <button id="confirmBtn" class="btn-confirm" style="display:none;">Confirm & Register</button>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Processing...</p>
+            </div>
+
+            <div class="status" id="status"></div>
+        </div>
+
+        <div class="button-group" style="margin-top: 20px;">
+            <a href="{% url 'dashboard' %}"><button class="btn-back" type="button">Back to Dashboard</button></a>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const captureBtn = document.getElementById('captureBtn');
+        const retakeBtn = document.getElementById('retakeBtn');
+        const confirmBtn = document.getElementById('confirmBtn');
+        const messageBox = document.getElementById('messageBox');
+        const loading = document.getElementById('loading');
+        const status = document.getElementById('status');
+
+        let faceCaptured = false;
+
+        // Initialize camera
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user' }
+                });
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                };
+            } catch (err) {
+                showMessage('Error accessing camera: ' + err.message, 'error');
+                captureBtn.disabled = true;
+            }
+        }
+
+        // Capture photo
+        captureBtn.addEventListener('click', () => {
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                video.style.display = 'none';
+                canvas.style.display = 'block';
+                
+                captureBtn.style.display = 'none';
+                retakeBtn.style.display = 'inline-block';
+                confirmBtn.style.display = 'inline-block';
+                
+                faceCaptured = true;
+                showMessage('Face captured. Please confirm to proceed.', 'info');
+            }
+        });
+
+        // Retake photo
+        retakeBtn.addEventListener('click', () => {
+            video.style.display = 'block';
+            canvas.style.display = 'none';
+            
+            captureBtn.style.display = 'inline-block';
+            retakeBtn.style.display = 'none';
+            confirmBtn.style.display = 'none';
+            
+            faceCaptured = false;
+            showMessage('', 'info');
+        });
+
+        // Confirm and register
+        confirmBtn.addEventListener('click', async () => {
+            if (!faceCaptured) return;
+
+            loading.classList.add('show');
+            confirmBtn.disabled = true;
+
+            try {
+                const imageData = canvas.toDataURL('image/jpeg');
+                
+                const response = await fetch('{% url "capture_face_registration" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        image: imageData
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('✓ ' + result.message, 'success');
+                    setTimeout(() => {
+                        window.location.href = '{% url "dashboard" %}';
+                    }, 2000);
+                } else {
+                    showMessage('✗ ' + result.message, 'error');
+                    loading.classList.remove('show');
+                    confirmBtn.disabled = false;
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+                loading.classList.remove('show');
+                confirmBtn.disabled = false;
+            }
+        });
+
+        function showMessage(msg, type) {
+            messageBox.textContent = msg;
+            messageBox.className = 'message';
+            if (msg) {
+                messageBox.classList.add(type, 'show');
+            }
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Initialize on page load
+        initCamera();
+    </script>
+</body>
+
+</html>

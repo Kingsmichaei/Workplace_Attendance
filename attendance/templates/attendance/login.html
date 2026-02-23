@@ -7,23 +7,200 @@
 </head>
 <body>
     <div class="login-container">
-         <h2>Employee Login</h2>
+        <h2>Employee Login</h2>
 
-      <form method="POST" action="">
-        {% csrf_token %}
-        <label for="username">Username</label>
-        <input type="text" id="username" name="username" placeholder="username" required>
-        <br><br>
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password" placeholder="password" required>
-        <br><br>
-        <div class="login-actions">
-            <button class="btn-small" type="submit">Login</button>
-            <a class="forgot-link" href="{% url 'password_reset' %}">Forgot password?</a>
-       </form>
+            <form method="POST" action="" id="password-tab" class="tab-content active">
+                {% csrf_token %}
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" placeholder="username" required>
+                <br><br>
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="password" required>
+                <br><br>
+
+                <button class="btn-small" type="submit">Login</button> 
+                <div class="login-actions">
+                <a class="forgot-link" href="{% url 'password_reset' %}">
+                Forgot Password?
+                </a>
+                <button class="tab" type="button" onclick="switchTab('facial', event)">
+                      Verify by FaceID
+                </button>
+                </div>
+
+               <!-- <p style="text-align:center; margin-top:10px;"> </p> -->
+            </form>
+
+        <!-- Facial Recognition Login Tab -->
+        <div id="facial-tab" class="tab-content">
+            <div class="facial-login-form">
+                <div class="facial-info">
+                    📷 Look at the camera and click "Verify Face" to login using facial recognition
+                </div>
+                
+                <label for="facial-username" style="display: block; text-align:left ; margin-bottom: 10px;">Username</label>
+                <input type="text" id="facial-username" placeholder="Enter your username" style="width: 280px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 15px;">
+
+                <video id="facialLoginVideo" class="facial-video" autoplay playsinline muted></video>
+
+                <div class="message" id="facialMessage"></div>
+
+                <div class="loading" id="facialLoading">
+                    <div class="spinner"></div>
+                    <p>Processing...</p>
+                </div>
+            </div>
+                <div class="facial-buttons">
+                    <button type="button" class="btn-facial-login" id="startCameraBtn">Start Camera</button>
+                    <button type="button" class="btn-facial-login" id="verifyFacialLoginBtn" style="display: none;">Verify Face</button>
+                    <button type="button" class="btn-facial-login" id="stopCameraBtn" style="display: none;">Cancel</button>
+                    <button type="button" class="btn-facial-cancel" onclick="switchTab('password', event)"> Password Login</button>
+                </div>
         </div>
     </div>
-    
+
+    <script>
+        let facialLoginStream = null;
+
+        function switchTab(tab, event) {
+            // Clear facial recognition when switching away
+            if (tab !== 'facial' && facialLoginStream) {
+                facialLoginStream.getTracks().forEach(track => track.stop());
+                facialLoginStream = null;
+            }
+
+            // Hide all tabs
+            document.getElementById('password-tab').classList.remove('active');
+            document.getElementById('facial-tab').classList.remove('active');
+
+            // Show selected tab
+            document.getElementById(tab + '-tab').classList.add('active');
+
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        const facialLoginVideo = document.getElementById('facialLoginVideo');
+        const startCameraBtn = document.getElementById('startCameraBtn');
+        const verifyFacialLoginBtn = document.getElementById('verifyFacialLoginBtn');
+        const stopCameraBtn = document.getElementById('stopCameraBtn');
+        const facialMessage = document.getElementById('facialMessage');
+        const facialLoading = document.getElementById('facialLoading');
+
+        // Start camera for facial login
+        startCameraBtn.addEventListener('click', async () => {
+            try {
+                facialLoginStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user' }
+                });
+                facialLoginVideo.srcObject = facialLoginStream;
+                facialLoginVideo.classList.add('show');
+
+                startCameraBtn.style.display = 'none';
+                verifyFacialLoginBtn.style.display = 'inline-block';
+                stopCameraBtn.style.display = 'inline-block';
+
+                showFacialMessage('', '');
+            } catch (err) {
+                showFacialMessage('Error accessing camera: ' + err.message, 'error');
+            }
+        });
+
+        // Stop camera
+        stopCameraBtn.addEventListener('click', () => {
+            if (facialLoginStream) {
+                facialLoginStream.getTracks().forEach(track => track.stop());
+                facialLoginStream = null;
+            }
+            facialLoginVideo.classList.remove('show');
+            startCameraBtn.style.display = 'inline-block';
+            verifyFacialLoginBtn.style.display = 'none';
+            stopCameraBtn.style.display = 'none';
+        });
+
+        // Verify facial login
+        verifyFacialLoginBtn.addEventListener('click', async () => {
+            const username = document.getElementById('facial-username').value;
+            
+            if (!username) {
+                showFacialMessage('Please enter your username', 'error');
+                return;
+            }
+
+            if (!facialLoginVideo.readyState || !facialLoginStream) {
+                showFacialMessage('Camera not ready', 'error');
+                return;
+            }
+
+            facialLoading.style.display = 'block';
+            verifyFacialLoginBtn.disabled = true;
+
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = facialLoginVideo.videoWidth;
+                canvas.height = facialLoginVideo.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(facialLoginVideo, 0, 0);
+                
+                const imageData = canvas.toDataURL('image/jpeg');
+
+                const response = await fetch('{% url "facial_login" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        image: imageData,
+                        username: username
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showFacialMessage('✓ ' + result.message, 'success');
+                    setTimeout(() => {
+                        window.location.href = result.redirect;
+                    }, 1500);
+                } else {
+                    showFacialMessage('✗ ' + result.message, 'error');
+                    facialLoading.style.display = 'none';
+                    verifyFacialLoginBtn.disabled = false;
+                }
+            } catch (error) {
+                showFacialMessage('Error: ' + error.message, 'error');
+                facialLoading.style.display = 'none';
+                verifyFacialLoginBtn.disabled = false;
+            }
+        });
+
+        function showFacialMessage(msg, type) {
+            facialMessage.textContent = msg;
+            facialMessage.className = 'message';
+            if (msg) {
+                facialMessage.classList.add(type, 'show');
+            }
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
 </body>
 </html>
  

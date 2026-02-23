@@ -1,8 +1,8 @@
+from django.contrib.auth.models import User
 from urllib import request
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
 from django.utils import timezone
 from django.utils.timezone import localtime
 from .models import Attendance
@@ -13,6 +13,7 @@ from django.contrib import messages
 from .models import Leave
 from datetime import date
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth import login
 
 
 
@@ -205,6 +206,316 @@ def update_leave_status(request, leave_id, status):
 def logout_view(request):
     logout(request)
     return redirect('login')
+
+
+# ==================== FACIAL RECOGNITION VIEWS ====================
+
+@login_required
+def register_face(request):
+    """Register or update facial data for the current user"""
+    from .models import FaceData
+    
+    try:
+        face_data = FaceData.objects.get(user=request.user)
+    except FaceData.DoesNotExist:
+        face_data = FaceData.objects.create(user=request.user)
+
+    if request.method == "POST":
+        return render(request, 'attendance/register_face.html', {
+            'face_registered': face_data.face_registered
+        })
+
+    return render(request, 'attendance/register_face.html', {
+        'face_registered': face_data.face_registered
+    })
+
+
+@csrf_exempt
+@login_required
+def capture_face_for_registration(request):
+    """API endpoint to capture and store facial encoding during registration"""
+    from django.http import JsonResponse
+    from .models import FaceData
+    from .facial_recognition import FacialRecognitionEngine
+    import json
+    
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            base64_image = data.get('image')
+
+            if not base64_image:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No image provided'
+                })
+
+            # Convert base64 to image
+            image = FacialRecognitionEngine.base64_to_image(base64_image)
+            if image is None:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Invalid image format'
+                })
+
+            # Extract facial encodings
+            encodings = FacialRecognitionEngine.get_face_encodings_from_image(image)
+
+            if not encodings:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No face detected. Please ensure your face is clearly visible.'
+                })
+
+            if len(encodings) > 1:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Multiple faces detected. Ensure only your face is in the frame.'
+                })
+
+            # Store the encoding
+            face_data, created = FaceData.objects.get_or_create(user=request.user)
+            face_data.set_encodings([encodings[0].tolist()])
+            face_data.face_registered = True
+            face_data.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Face registered successfully!'
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error: {str(e)}'
+            })
+
+    return JsonResponse({'success': False, 'message': 'Invalid request method'})
+
+
+@csrf_exempt
+@login_required
+def facial_recognition_clock_in_out(request):
+    """
+    Handle facial recognition for clock in/out.
+    This view captures facial data and verifies it against stored facial data.
+    """
+    from django.http import JsonResponse
+    from .models import FaceData
+    from .facial_recognition import FacialRecognitionEngine
+    import json
+    import numpy as np      
+    
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            action = data.get('action')  # 'clock_in' or 'clock_out'
+            base64_image = data.get('image')
+
+            if action not in ['clock_in', 'clock_out']:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Invalid action'
+                })
+
+            if not base64_image:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No image provided'
+                })
+
+            # Convert base64 to image
+            image = FacialRecognitionEngine.base64_to_image(base64_image)
+            if image is None:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Invalid image format'
+                })
+
+            # Get facial encodings from the captured image
+            captured_encodings = FacialRecognitionEngine.get_face_encodings_from_image(image)
+
+            if not captured_encodings:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No face detected in the image'
+                })
+
+            if len(captured_encodings) > 1:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Multiple faces detected'
+                })
+
+            # Get stored facial data for the user
+            try:
+                face_data = request.user.face_data
+            except FaceData.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Facial data not registered. Please register your face first.'
+                })
+
+            # Get stored encodings
+            stored_encodings = face_data.get_encodings()
+            if not stored_encodings:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No facial data found for this user'
+                })
+
+            # Convert stored encodings back to numpy arrays
+            known_encodings = [np.array(enc) for enc in stored_encodings]
+
+            # Verify the captured face
+            is_match, distance = FacialRecognitionEngine.verify_face(
+                known_encodings,
+                captured_encodings[0]
+            )
+
+            if not is_match:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Facial recognition failed. Not recognized. (Distance: {distance:.2f})',
+                    'distance': float(distance)
+                })
+
+            # Update attendance with facial recognition
+            today = timezone.now().date()
+            attendance, created = Attendance.objects.get_or_create(
+                user=request.user,
+                date=today
+            )
+
+            if action == 'clock_in':
+                attendance.clock_in = localtime(timezone.now()).time()
+                attendance.clock_in_method = 'facial'
+                attendance.save()
+
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Clocked in successfully at {attendance.clock_in}',
+                    'distance': float(distance)
+                })
+
+            elif action == 'clock_out':
+                if not attendance.clock_in:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Please clock in first'
+                    })
+
+                attendance.clock_out = localtime(timezone.now()).time()
+                attendance.clock_out_method = 'facial'
+                attendance.save()
+
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Clocked out successfully at {attendance.clock_out}',
+                    'distance': float(distance)
+                })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error: {str(e)}'
+            })
+
+    return JsonResponse({'success': False, 'message': 'Invalid request method'})
+
+
+@csrf_exempt
+def facial_login(request):
+    """Alternative login method using facial recognition"""
+    from django.http import JsonResponse
+    from .models import FaceData
+    from .facial_recognition import FacialRecognitionEngine
+    import json
+    import numpy as np
+    
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            base64_image = data.get('image')
+            username = data.get('username')
+
+            if not base64_image or not username:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Image and username required'
+                })
+
+            # Get the user
+            try:
+                user = User.objects.get(username=username)
+            except User.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'User not found'
+                })
+
+            # Convert base64 to image
+            image = FacialRecognitionEngine.base64_to_image(base64_image)
+            if image is None:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Invalid image format'
+                })
+
+            # Get facial encodings from captured image
+            captured_encodings = FacialRecognitionEngine.get_face_encodings_from_image(image)
+
+            if not captured_encodings:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No face detected'
+                })
+
+            # Get stored facial data
+            try:
+                face_data = user.face_data
+            except FaceData.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'User has not registered facial data'
+                })
+
+            stored_encodings = face_data.get_encodings()
+            if not stored_encodings:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No facial data found'
+                })
+
+            # Convert to numpy arrays
+            known_encodings = [np.array(enc) for enc in stored_encodings]
+
+            # Verify
+            is_match, distance = FacialRecognitionEngine.verify_face(
+                known_encodings,
+                captured_encodings[0]
+            )
+
+            if is_match:
+                login(request, user)
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Login successful',
+                    'redirect': '/dashboard/'
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Face not recognized'
+                })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error: {str(e)}'
+            })
+
+    return JsonResponse({'success': False, 'message': 'Invalid request method'})
 
 
 
