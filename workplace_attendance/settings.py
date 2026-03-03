@@ -77,12 +77,30 @@ WSGI_APPLICATION = 'workplace_attendance.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+# Using SQLite for development. For production, switch to PostgreSQL or MySQL and update the ENGINE and NAME accordingly.
+
+# NEW: Commenting out the default SQLite configuration since we will be using MYSQL in production. Developers can uncomment and use SQLite for local development if needed.
+
+# NEW - MySQL configuration (update with your actual database credentials)
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'attendance_db',
+        'USER': 'root',
+        'PASSWORD': 'Michael13052005!',
+        'HOST': 'localhost',
+        'PORT': '3306',
     }
 }
+
+
+#DATABASES = {
+   # 'default': {
+   #     'ENGINE': 'django.db.backends.sqlite3',
+   #    'NAME': BASE_DIR / 'db.sqlite3',
+   # }
+#}
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MEDIA_URL = '/media/'

@@ -598,9 +598,9 @@ def attendance_summary(request):
     staff_users = User.objects.filter(is_superuser=False, is_active=True)
     total_staff = staff_users.count()
 
-    # Present / absent counts for today
-    total_present = Attendance.objects.filter(date=today, clock_in__isnull=False).count()
-    total_clocked_out = Attendance.objects.filter(date=today, clock_out__isnull=False).count()
+    # Present / absent counts for today (based on clock_in) - only count non-superusers
+    total_present = Attendance.objects.filter(date=today, clock_in__isnull=False, user__is_superuser=False).count()
+    total_clocked_out = Attendance.objects.filter(date=today, clock_out__isnull=False, user__is_superuser=False).count()
     total_absent = max(0, total_staff - total_present)
 
     # Personal summary for each staff (today)

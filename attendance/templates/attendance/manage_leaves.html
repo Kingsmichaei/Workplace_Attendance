@@ -141,7 +141,7 @@
                                     <strong>{{ leave.user.get_full_name|default:leave.user.username }}</strong>
                                 </td>
                                 <td>
-                                    <small>{{ leave.start_date|date:"M d, Y" }} to {{ leave.end_date|date:"M d, Y" }}</small>
+                                    <small>{{ leave.start_date|date:"d M, Y" }} to {{ leave.end_date|date:"d M, Y" }}</small>
                                 </td>
                                 <td>
                                     <small>{{ leave_durations|get_item:leave.id }} days</small>
@@ -155,7 +155,7 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <small>{{ leave.created_at|date:"M d, Y" }}</small>
+                                    <small>{{ leave.created_at|date:"d M, Y" }}</small>
                                 </td>
                                 <td>
                                     {% if leave.status == "Pending" %}
@@ -212,7 +212,7 @@
                                             <strong>{{ leave.user.get_full_name|default:leave.user.username }}</strong>
                                         </td>
                                         <td>
-                                            <small>{{ leave.start_date|date:"M d, Y" }} to {{ leave.end_date|date:"M d, Y" }}</small>
+                                            <small>{{ leave.start_date|date:"d M, Y" }} to {{ leave.end_date|date:"d M, Y" }}</small>
                                         </td>
                                         <td>
                                             <small>{{ leave_durations|get_item:leave.id }} days</small>
@@ -221,7 +221,7 @@
                                             <small>{{ leave.reason|truncatewords:15 }}</small>
                                         </td>
                                         <td>
-                                            <small>{{ leave.created_at|date:"M d, Y" }}</small>
+                                            <small>{{ leave.created_at|date:"d M, Y" }}</small>
                                         </td>
                                         <td>
                                             <div class="action-links">
@@ -273,7 +273,7 @@
                                             <strong>{{ leave.user.get_full_name|default:leave.user.username }}</strong>
                                         </td>
                                         <td>
-                                            <small>{{ leave.start_date|date:"M d, Y" }} to {{ leave.end_date|date:"M d, Y" }}</small>
+                                            <small>{{ leave.start_date|date:"d M, Y" }} to {{ leave.end_date|date:"d M, Y" }}</small>
                                         </td>
                                         <td>
                                             <small>{{ leave_durations|get_item:leave.id }} days</small>
@@ -282,7 +282,7 @@
                                             <small>{{ leave.approved_by.get_full_name|default:leave.approved_by.username|default:"N/A" }}</small>
                                         </td>
                                         <td>
-                                            <small>{{ leave.created_at|date:"M d, Y" }}</small>
+                                            <small>{{ leave.created_at|date:"d M, Y" }}</small>
                                         </td>
                                     </tr>
                                     {% endif %}
@@ -324,7 +324,7 @@
                                             <strong>{{ leave.user.get_full_name|default:leave.user.username }}</strong>
                                         </td>
                                         <td>
-                                            <small>{{ leave.start_date|date:"M d, Y" }} to {{ leave.end_date|date:"M d, Y" }}</small>
+                                            <small>{{ leave.start_date|date:"d M, Y" }} to {{ leave.end_date|date:"d M, Y" }}</small>
                                         </td>
                                         <td>
                                             <small>{{ leave_durations|get_item:leave.id }} days</small>
@@ -333,7 +333,7 @@
                                             <small>{{ leave.approved_by.get_full_name|default:leave.approved_by.username|default:"N/A" }}</small>
                                         </td>
                                         <td>
-                                            <small>{{ leave.created_at|date:"M d, Y" }}</small>
+                                            <small>{{ leave.created_at|date:"d M, Y" }}</small>
                                         </td>
                                     </tr>
                                     {% endif %}

@@ -117,7 +117,7 @@
                             {% for leave in leaves %}
                             <tr>
                                 <td>
-                                    <small>{{ leave.start_date|date:"M d, Y" }} to {{ leave.end_date|date:"M d, Y" }}</small>
+                                    <small>{{ leave.start_date|date:"d M, Y" }} to {{ leave.end_date|date:"d M, Y" }}</small>
                                 </td>
                                 <td>
                                     <small>{{ leave_durations|get_item:leave.id }} days</small>
@@ -131,7 +131,7 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <small>{{ leave.created_at|date:"M d, Y" }}</small>
+                                    <small>{{ leave.created_at|date:"d M, Y" }}</small>
                                 </td>
                                 <td>
                                     {% if leave.status == "Pending" %}
@@ -171,11 +171,11 @@
                                     {% for leave in pending_leaves %}
                                         {% if leave.status == "Pending" %}
                                             <tr>
-                                                <td><small>{{ leave.start_date|date:"M d, Y" }} to {{ leave.end_date|date:"M d, Y" }}</small></td>
+                                                <td><small>{{ leave.start_date|date:"d M, Y" }} to {{ leave.end_date|date:"d M, Y" }}</small></td>
                                                 <td><small>{{ leave_durations|get_item:leave.id }} days</small></td>
                                                 <td><small>{{ leave.reason|truncatewords:15 }}</small></td>
                                                 <td><span class="status-badge status-{{ leave.status|lower }}">{{ leave.status }}</span></td>
-                                                <td><small>{{ leave.created_at|date:"M d, Y" }}</small></td>
+                                                <td><small>{{ leave.created_at|date:"d M, Y" }}</small></td>
                                                 <td>
                                                     <a href="{% url 'cancel_leave' leave.id %}" class="action-link action-reject">Cancel</a>
                                                 </td>
@@ -215,11 +215,11 @@
                                     {% for leave in approved_leaves %}
                                         {% if leave.status == "Approved" %}
                                             <tr>
-                                                <td><small>{{ leave.start_date|date:"M d, Y" }} to {{ leave.end_date|date:"M d, Y" }}</small></td>
+                                                <td><small>{{ leave.start_date|date:"d M, Y" }} to {{ leave.end_date|date:"d M, Y" }}</small></td>
                                                 <td><small>{{ leave_durations|get_item:leave.id }} days</small></td>
                                                 <td><small>{{ leave.reason|truncatewords:15 }}</small></td>
                                                 <td><span class="status-badge status-{{ leave.status|lower }}">{{ leave.status }}</span></td>
-                                                <td><small>{{ leave.created_at|date:"M d, Y" }}</small></td>
+                                                <td><small>{{ leave.created_at|date:"d M, Y" }}</small></td>
                                             </tr>
                                         {% endif %}
                                     {% endfor %}
@@ -256,11 +256,11 @@
                                     {% for leave in rejected_leaves %}
                                         {% if leave.status == "Rejected" %}
                                             <tr>
-                                                <td><small>{{ leave.start_date|date:"M d, Y" }} to {{ leave.end_date|date:"M d, Y" }}</small></td>
+                                                <td><small>{{ leave.start_date|date:"d M, Y" }} to {{ leave.end_date|date:"d M, Y" }}</small></td>
                                                 <td><small>{{ leave_durations|get_item:leave.id }} days</small></td>
                                                 <td><small>{{ leave.reason|truncatewords:15 }}</small></td>
                                                 <td><span class="status-badge status-{{ leave.status|lower }}">{{ leave.status }}</span></td>
-                                                <td><small>{{ leave.created_at|date:"M d, Y" }}</small></td>
+                                                <td><small>{{ leave.created_at|date:"d M, Y" }}</small></td>
                                             </tr>
                                         {% endif %}
                                     {% endfor %}
