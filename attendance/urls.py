@@ -2,8 +2,9 @@ from django.urls import path
 from . views import (
     activate_user, deactivate_user, delete_user, login_view, dashboard, 
     logout_view, add_user, manage_leaves, request_leave, staff_attendance, 
-    update_leave_status, register_face, capture_face_for_registration,
-    facial_recognition_clock_in_out, facial_login
+    update_leave_status, cancel_leave, register_face, capture_face_for_registration,
+    facial_recognition_clock_in_out, facial_login, attendance_summary,
+    export_attendance_csv, export_attendance_excel
 )
 from django.contrib.auth import views as auth_views
 
@@ -19,6 +20,10 @@ urlpatterns = [
     path('request-leave/', request_leave, name='request_leave'),
     path('manage-leaves/',manage_leaves, name='manage_leaves'),
     path('update-leave-status/<int:leave_id>/<str:status>/',update_leave_status, name='update_leave_status'),
+    path('cancel-leave/<int:leave_id>/', cancel_leave, name='cancel_leave'),
+    path('attendance-summary/', attendance_summary, name='attendance_summary'),
+    path('export-csv/', export_attendance_csv, name='export_attendance_csv'),
+    path('export-excel/', export_attendance_excel, name='export_attendance_excel'),
     
     # Facial Recognition URLs
     path('register-face/', register_face, name='register_face'),

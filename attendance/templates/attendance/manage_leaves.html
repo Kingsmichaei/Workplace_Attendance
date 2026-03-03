@@ -1,47 +1,381 @@
-{% load static %}
+ {% load static %}
+{% load custom_filters %}
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Leaves</title>
+    <link rel="stylesheet" href="{% static 'attendance/leaves.css' %}">
 </head>
 <body>
+<div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h2>Leave Management</h2>
+        <p class="page-subtitle">Review and manage employee leave requests</p>
+    </div>
 
-<div class="add-user-container">
-    <h2>Leave Requests</h2>
+    <!-- Messages -->
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="message {% if message.tags %}{{ message.tags }}{% endif %}">
+                    <span class="message-icon"></span>
+                    <span>{{ message }}</span>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
 
-    <table style="width:100%; border-collapse: collapse;">
-        <tr>
-            <th>User</th>
-            <th>Dates</th>
-            <th>Status</th>
-            <th>Action</th>
-        </tr>
+    <!-- Add New Leave Form -->
+    <div class="form-container" style="margin-bottom: 30px;">
+        <h3 style="margin-top: 0; margin-bottom: 20px; color: #2c3e50;">Create Leave for Employee</h3>
+        
+        <form method="POST" id="addLeaveForm">
+            {% csrf_token %}
+            <input type="hidden" name="add_leave" value="1">
 
-        {% for leave in leaves %}
-        <tr style="border-bottom: 1px solid #ccc;">
-            <td>{{ leave.user.username }}</td>
-            <td>{{ leave.start_date }} to {{ leave.end_date }}</td>
-            <td>{{ leave.status }}</td>
-            <td>
-                {% if leave.status == "Pending" %}
-                    <a href="{% url 'update_leave_status' leave.id 'Approved' %}">
-                        Approve
-                    </a> |
-                    <a href="{% url 'update_leave_status' leave.id 'Rejected' %}">
-                        Reject
-                    </a>
+            <div class="row" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; align-items: end;">
+                <!-- Employee Selection -->
+                <div class="form-group">
+                    <label for="user_id">Employee</label>
+                    <select 
+                        id="user_id"
+                        name="user_id" 
+                        required
+                        style="width: 100%; padding: 12px 15px; border: 2px solid #e1e8ed; border-radius: 8px; font-family: inherit; font-size: 14px;"
+                    >
+                        <option value="">Select an employee...</option>
+                        {% for user in all_users %}
+                            <option value="{{ user.id }}">
+                                {{ user.get_full_name|default:user.username }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Start Date -->
+                <div class="form-group">
+                    <label for="add_start_date">Start Date</label>
+                    <input 
+                        type="date" 
+                        id="add_start_date"
+                        name="start_date" 
+                        required
+                    >
+                </div>
+
+                <!-- End Date -->
+                <div class="form-group">
+                    <label for="add_end_date">End Date</label>
+                    <input 
+                        type="date" 
+                        id="add_end_date"
+                        name="end_date" 
+                        required
+                    >
+                </div>
+
+                <!-- Submit Button -->
+                <div class="form-group">
+                    <button type="submit" class="btn btn-success" style="width: 100%;">
+                        ✓ Create Leave
+                    </button>
+                </div>
+            </div>
+
+            <!-- Reason -->
+            <div class="form-group" style="margin-top: 15px;">
+                <label for="reason">Reason</label>
+                <textarea 
+                    id="reason"
+                    name="reason" 
+                    placeholder="Enter the reason for this leave..."
+                    required
+                    minlength="5"
+                    style="min-height: 80px;"
+                ></textarea>
+            </div>
+        </form>
+  </div>
+
+
+    <!-- Tabs for different statuses -->
+    <div class="tabs">
+        <button class="tab active" data-status="all">
+            All Requests
+        </button>
+        <button class="tab" data-status="pending">
+            ⏳ Pending
+        </button>
+        <button class="tab" data-status="approved">
+            ✓ Approved
+        </button>
+        <button class="tab" data-status="rejected">
+            ✕ Rejected
+        </button>
+    </div>
+
+    <!-- All Leaves Table -->
+    <div class="tab-content active" id="all-content">
+        <div class="table-container">
+            {% if leaves %}
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Leave Period</th>
+                                <th>Duration</th>
+                                <th>Reason</th>
+                                <th>Status</th>
+                                <th>Requested On</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for leave in leaves %}
+                            <tr>
+                                <td>
+                                    <strong>{{ leave.user.get_full_name|default:leave.user.username }}</strong>
+                                </td>
+                                <td>
+                                    <small>{{ leave.start_date|date:"M d, Y" }} to {{ leave.end_date|date:"M d, Y" }}</small>
+                                </td>
+                                <td>
+                                    <small>{{ leave_durations|get_item:leave.id }} days</small>
+                                </td>
+                                <td>
+                                    <small>{{ leave.reason|truncatewords:15 }}</small>
+                                </td>
+                                <td>
+                                    <span class="status-badge status-{{ leave.status|lower }}">
+                                        {{ leave.status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>{{ leave.created_at|date:"M d, Y" }}</small>
+                                </td>
+                                <td>
+                                    {% if leave.status == "Pending" %}
+                                        <div class="action-links">
+                                            <a href="{% url 'update_leave_status' leave.id 'Approved' %}" class="action-link action-approve">
+                                                Approve
+                                            </a>
+                                            <a href="{% url 'update_leave_status' leave.id 'Rejected' %}" class="action-link action-reject">
+                                                Reject
+                                            </a>
+                                        </div>
+                                    {% else %}
+                                        <span class="status-badge status-{{ leave.status|lower }}">
+                                            {{ leave.status }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">📋</div>
+                    <p>No leave requests found</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Pending Leaves -->
+    <div class="tab-content" id="pending-content">
+        <div class="table-container">
+            {% with pending_leaves=leaves|dictsort:"status" %}
+                {% if pending_leaves %}
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Leave Period</th>
+                                    <th>Duration</th>
+                                    <th>Reason</th>
+                                    <th>Requested On</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for leave in leaves %}
+                                    {% if leave.status == "Pending" %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ leave.user.get_full_name|default:leave.user.username }}</strong>
+                                        </td>
+                                        <td>
+                                            <small>{{ leave.start_date|date:"M d, Y" }} to {{ leave.end_date|date:"M d, Y" }}</small>
+                                        </td>
+                                        <td>
+                                            <small>{{ leave_durations|get_item:leave.id }} days</small>
+                                        </td>
+                                        <td>
+                                            <small>{{ leave.reason|truncatewords:15 }}</small>
+                                        </td>
+                                        <td>
+                                            <small>{{ leave.created_at|date:"M d, Y" }}</small>
+                                        </td>
+                                        <td>
+                                            <div class="action-links">
+                                                <a href="{% url 'update_leave_status' leave.id 'Approved' %}" class="action-link action-approve">
+                                                    Approve
+                                                </a>
+                                                <a href="{% url 'update_leave_status' leave.id 'Rejected' %}" class="action-link action-reject">
+                                                    Reject
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 {% else %}
-                    {{ leave.status }}
+                    <div class="empty-state">
+                        <div class="empty-state-icon">✓</div>
+                        <p>No pending leave requests</p>
+                    </div>
                 {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
+            {% endwith %}
+        </div>
+    </div>
 
-    <a href="{% url 'dashboard' %}" class="back-link">
-        Back to Dashboard
-    </a>
+    <!-- Approved Leaves -->
+    <div class="tab-content" id="approved-content">
+        <div class="table-container">
+            {% with approved_leaves=leaves %}
+                {% if approved_leaves %}
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Leave Period</th>
+                                    <th>Duration</th>
+                                    <th>Approved By</th>
+                                    <th>Approved On</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for leave in leaves %}
+                                    {% if leave.status == "Approved" %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ leave.user.get_full_name|default:leave.user.username }}</strong>
+                                        </td>
+                                        <td>
+                                            <small>{{ leave.start_date|date:"M d, Y" }} to {{ leave.end_date|date:"M d, Y" }}</small>
+                                        </td>
+                                        <td>
+                                            <small>{{ leave_durations|get_item:leave.id }} days</small>
+                                        </td>
+                                        <td>
+                                            <small>{{ leave.approved_by.get_full_name|default:leave.approved_by.username|default:"N/A" }}</small>
+                                        </td>
+                                        <td>
+                                            <small>{{ leave.created_at|date:"M d, Y" }}</small>
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <p>No approved leave requests</p>
+                    </div>
+                {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+
+    <!-- Rejected Leaves -->
+    <div class="tab-content" id="rejected-content">
+        <div class="table-container">
+            {% with rejected_leaves=leaves %}
+                {% if rejected_leaves %}
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Leave Period</th>
+                                    <th>Duration</th>
+                                    <th>Rejected By</th>
+                                    <th>Rejected On</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for leave in leaves %}
+                                    {% if leave.status == "Rejected" %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ leave.user.get_full_name|default:leave.user.username }}</strong>
+                                        </td>
+                                        <td>
+                                            <small>{{ leave.start_date|date:"M d, Y" }} to {{ leave.end_date|date:"M d, Y" }}</small>
+                                        </td>
+                                        <td>
+                                            <small>{{ leave_durations|get_item:leave.id }} days</small>
+                                        </td>
+                                        <td>
+                                            <small>{{ leave.approved_by.get_full_name|default:leave.approved_by.username|default:"N/A" }}</small>
+                                        </td>
+                                        <td>
+                                            <small>{{ leave.created_at|date:"M d, Y" }}</small>
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <p>No rejected leave requests</p>
+                    </div>
+                {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+
+    <!-- Back Link -->
+    <a href="{% url 'dashboard' %}" class="back-link">Back to Dashboard</a>
 </div>
+
+<script>
+    // Tab switching functionality
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            // Remove active class from all tabs and contents
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            // Add active class to clicked tab
+            this.classList.add('active');
+
+            // Show corresponding content
+            const status = this.getAttribute('data-status');
+            if (status === 'all') {
+                document.getElementById('all-content').classList.add('active');
+            } else {
+                document.getElementById(status + '-content').classList.add('active');
+            }
+        });
+    });
+</script>
 
 </body>
 </html>

@@ -6,6 +6,7 @@ class FaceDataAdmin(admin.ModelAdmin):
     readonly_fields = ('registered_at', 'updated_at')
     list_display = ('user', 'face_registered', 'registered_at')
     list_filter = ('face_registered', 'registered_at')
+    
     search_fields = ('user__username', 'user__email')
 
 

@@ -1,5 +1,4 @@
 from django.contrib.auth.models import User
-from urllib import request
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -11,10 +10,26 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib import messages
 from .models import Leave
-from datetime import date
+from datetime import date, time as dt_time
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import login
+from django.utils.timezone import now
+from django.db.models import Count
+import csv
+from django.http import HttpResponse
+from .models import Attendance
+from django.http import JsonResponse
+from .models import FaceData
+from .facial_recognition import FacialRecognitionEngine
+import json
+import numpy as np    
+from openpyxl import Workbook
+from urllib import request
 
+
+
+    
+    
 
 
 @csrf_exempt
@@ -40,7 +55,9 @@ def login_view(request):
 
 
 def is_admin(user):
-    return user.is_superuser
+    return user.is_authenticated and user.is_superuser
+
+
 
 @login_required
 @user_passes_test(is_admin)
@@ -67,15 +84,12 @@ def add_user(request):
             first_name=first_name,
             last_name=last_name
         )
-        login(request, user)
         return redirect('dashboard')
     
     return render(request, "attendance/add_user.html")
 
 
 
-def is_admin(user):
-    return user.is_authenticated and user.is_superuser
 
 @login_required
 @user_passes_test(is_admin)
@@ -104,6 +118,8 @@ def activate_user(request, user_id):
     user.save()
     return redirect('dashboard')
 
+
+
 @login_required
 @user_passes_test(is_admin)
 def delete_user(request, user_id):
@@ -115,6 +131,8 @@ def delete_user(request, user_id):
 
     user.delete()
     return redirect('dashboard')
+
+
 
 @login_required
 def dashboard(request):
@@ -145,7 +163,9 @@ def dashboard(request):
 
 
 @login_required
+@login_required
 def request_leave(request):
+    # allow users to submit a leave and also view their past requests
     if request.method == "POST":
         start_date = request.POST.get("start_date")
         end_date = request.POST.get("end_date")
@@ -163,9 +183,16 @@ def request_leave(request):
         )
 
         messages.success(request, "Leave request submitted successfully.")
-        return redirect("dashboard")
+        return redirect("request_leave")
 
-    return render(request, "attendance/request_leave.html")
+    # for GET (or after redirect) show the user's own leave requests
+    leaves = Leave.objects.filter(user=request.user).order_by("-created_at")
+    leave_durations = {leave.id: (leave.end_date - leave.start_date).days + 1 for leave in leaves}
+
+    return render(request, "attendance/request_leave.html", {
+        "leaves": leaves,
+        "leave_durations": leave_durations,
+    })
 
 
 
@@ -186,8 +213,45 @@ def staff_attendance(request, user_id):
 
 @staff_member_required
 def manage_leaves(request):
+    # Handle adding new leave for an employee
+    if request.method == "POST" and "add_leave" in request.POST:
+        user_id = request.POST.get("user_id")
+        start_date = request.POST.get("start_date")
+        end_date = request.POST.get("end_date")
+        reason = request.POST.get("reason")
+        
+        if user_id and start_date and end_date and reason:
+            if start_date <= end_date:
+                user = User.objects.get(id=user_id)
+                Leave.objects.create(
+                    user=user,
+                    start_date=start_date,
+                    end_date=end_date,
+                    reason=reason,
+                    status='Approved',
+                    approved_by=request.user
+                )
+                messages.success(request, f"Leave request created successfully for {user.get_full_name() or user.username}.")
+                return redirect('manage_leaves')
+            else:
+                messages.error(request, "End date must be after start date.")
+        else:
+            messages.error(request, "All fields are required.")
+    
     leaves = Leave.objects.all().order_by("-created_at")
-    return render(request, "attendance/manage_leaves.html", {"leaves": leaves})
+    all_users = User.objects.filter(is_superuser=False).order_by('first_name', 'last_name')
+    
+    # Calculate duration for each leave
+    leave_durations = {}
+    for leave in leaves:
+        duration = (leave.end_date - leave.start_date).days + 1
+        leave_durations[leave.id] = duration
+    
+    return render(request, "attendance/manage_leaves.html", {
+        "leaves": leaves,
+        "leave_durations": leave_durations,
+        "all_users": all_users
+    })
 
 @staff_member_required
 def update_leave_status(request, leave_id, status):
@@ -199,6 +263,18 @@ def update_leave_status(request, leave_id, status):
         leave.save()
 
     return redirect("manage_leaves")
+
+
+@login_required
+def cancel_leave(request, leave_id):
+    """Allow a user to cancel their own pending leave request."""
+    leave = get_object_or_404(Leave, id=leave_id, user=request.user)
+    if leave.status == "Pending":
+        leave.delete()
+        messages.success(request, "Your leave request has been cancelled.")
+    else:
+        messages.error(request, "Only pending leave requests may be cancelled.")
+    return redirect("request_leave")
 
 
 
@@ -300,12 +376,7 @@ def facial_recognition_clock_in_out(request):
     Handle facial recognition for clock in/out.
     This view captures facial data and verifies it against stored facial data.
     """
-    from django.http import JsonResponse
-    from .models import FaceData
-    from .facial_recognition import FacialRecognitionEngine
-    import json
-    import numpy as np      
-    
+   
     if request.method == "POST":
         try:
             data = json.loads(request.body)
@@ -427,11 +498,6 @@ def facial_recognition_clock_in_out(request):
 @csrf_exempt
 def facial_login(request):
     """Alternative login method using facial recognition"""
-    from django.http import JsonResponse
-    from .models import FaceData
-    from .facial_recognition import FacialRecognitionEngine
-    import json
-    import numpy as np
     
     if request.method == "POST":
         try:
@@ -520,3 +586,119 @@ def facial_login(request):
 
 
 
+# ==================== END OF FACIAL RECOGNITION VIEWS ====================
+
+# ==================== MONTHLY SUMMARY VIEWS ====================
+
+@login_required
+@user_passes_test(is_admin)
+def attendance_summary(request):
+    today = now().date()
+    # Total staff (exclude superusers)
+    staff_users = User.objects.filter(is_superuser=False, is_active=True)
+    total_staff = staff_users.count()
+
+    # Present / absent counts for today
+    total_present = Attendance.objects.filter(date=today, clock_in__isnull=False).count()
+    total_clocked_out = Attendance.objects.filter(date=today, clock_out__isnull=False).count()
+    total_absent = max(0, total_staff - total_present)
+
+    # Personal summary for each staff (today)
+    staff_summaries = []
+    for u in staff_users:
+        rec = Attendance.objects.filter(user=u, date=today).first()
+        if rec and rec.clock_in:
+            status = 'Present'
+        else:
+            status = 'Absent'
+
+        # Determine late clock-in and early clock-out based on default work times
+        # Default shift: 09:00 start, 17:00 end
+        late = False
+        early = False
+        if rec and rec.clock_in:
+            try:
+                if rec.clock_in > dt_time(9, 0):
+                    late = True
+            except Exception:
+                late = False
+
+        if rec and rec.clock_out:
+            try:
+                if rec.clock_out < dt_time(17, 0):
+                    early = True
+            except Exception:
+                early = False
+
+        staff_summaries.append({
+            'employee_id': u.id,
+            'username': u.username,
+            'full_name': f"{u.first_name} {u.last_name}".strip(),
+            'status': status,
+            'clock_in': getattr(rec, 'clock_in', None) if rec else None,
+            'clock_out': getattr(rec, 'clock_out', None) if rec else None,
+            'late': late,
+            'early': early,
+        })
+
+    context = {
+        'total_staff': total_staff,
+        'total_staff_clocked_in': total_present,
+        'total_staff_absent': total_absent,
+        'total_staff_clocked_out': total_clocked_out,
+        'staff_summaries': staff_summaries,
+    }
+
+    return render(request, 'attendance/attendance_summary.html', context)
+
+
+
+
+@login_required
+@user_passes_test(is_admin)
+def export_attendance_csv(request):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="attendance.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['User', 'Date', 'Clock In', 'Clock Out', 'Clock In Method', 'Clock Out Method'])
+
+    records = Attendance.objects.all()
+    for record in records:
+        writer.writerow([
+            record.user.username, 
+            record.date,
+            record.clock_in or '',
+            record.clock_out or '',
+            record.clock_in_method,
+            record.clock_out_method or ''
+        ])
+
+    return response      
+
+
+
+@login_required
+@user_passes_test(is_admin)
+def export_attendance_excel(request):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Attendance"
+
+    ws.append(["User", "Date", "Clock In", "Clock Out", "Clock In Method", "Clock Out Method"])
+    for record in Attendance.objects.all():
+        ws.append([
+            record.user.username,
+            str(record.date),
+            str(record.clock_in) if record.clock_in else '',
+            str(record.clock_out) if record.clock_out else '',
+            record.clock_in_method,
+            record.clock_out_method or ''
+        ])
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    response["Content-Disposition"] = "attachment; filename=attendance.xlsx"
+    
+    wb.save(response)
+    return response
+    
