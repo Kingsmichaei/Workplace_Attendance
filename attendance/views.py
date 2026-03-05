@@ -83,11 +83,6 @@ def add_user(request):
             first_name=first_name,
             last_name=last_name
         )
-        return JsonResponse({
-            "success": True,
-            "message": f"User {user.username} created successfully!"
-        })
-
 
     
     return render(request, "attendance/add_user.html")

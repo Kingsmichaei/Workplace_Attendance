@@ -1,1 +1,1 @@
-web: gunicorn workplace_attendance.wgsi --log-file -
+web: gunicorn workplace_attendance.wsgi --log-file -

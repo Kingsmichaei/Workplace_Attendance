@@ -237,3 +237,55 @@ text-align: center;
             font-size: 14px;
             margin-bottom: 15px;
         }
+    /* Add responsive styles for mobile and web screens */
+/* @media (max-width: 768px) {
+    .login-container {
+        width: 90%;
+        max-width: 400px;
+        padding: 20px;
+        margin: 0 auto;
+    }
+    .login-container h2 {
+        font-size: 1.5em;
+    }
+    .login-container input[type="text"],
+    .login-container input[type="password"] {
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .btn-small,
+    .btn-facial-login,
+    .btn-facial-cancel {
+        width: 100%;
+        margin: 5px 0;
+    }
+    .facial-video {
+        width: 100%;
+        height: auto;
+    }
+    .facial-video {
+        width: 100%;
+        height: auto;
+    }
+    .facial-buttons {
+        display: flex;
+        flex-direction: column;
+    }
+    .login-actions {
+        text-align: center;
+    }
+    .tab {
+        margin-top: 10px;
+    }
+}
+
+@media (min-width: 769px) {
+    .login-container {
+        width: 400px;
+        padding: 40px;
+    }
+    .facial-video {
+        width: 300px;
+        height: 225px;
+    }
+} */
