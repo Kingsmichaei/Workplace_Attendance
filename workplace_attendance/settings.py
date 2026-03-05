@@ -22,7 +22,9 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = ['*']  # Update this with your actual domain or IP address in production
-CSRF_TRUSTED_ORIGINS = ['https://workplaceattendance-production.up.railway.app/']
+CSRF_TRUSTED_ORIGINS = ['https://workplaceattendance-production.up.railway.app']
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
