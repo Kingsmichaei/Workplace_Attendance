@@ -1,0 +1,1 @@
+web: gunicorn workplace_attendance.wgsi --log-file -
