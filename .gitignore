@@ -1,0 +1,24 @@
+# Environment variables and sensitive information should be added to .env file and not committed to version control. The .env file should be included in .gitignore to prevent it from being tracked by Git.
+.env
+
+# VIRTUAL ENVIRONMENT
+.VENV/
+venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Database
+db.sqlite3
+data_backup.json
+
+# Static files
+staticfiles/
+
+# VS Code
+.vscode/
+
+# pyenv
+pyvenv.cfg
