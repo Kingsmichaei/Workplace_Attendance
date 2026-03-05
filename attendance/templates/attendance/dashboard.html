@@ -169,7 +169,7 @@
         <td>{{ user.username }}</td>
         <td>{{ user.first_name }} {{ user.last_name }}</td>
         <td>
-            <a class="btn" href="{% url 'staff_attendance' user.id %}">View Attendance</a>
+            <a class="btn" href="{% url 'staff_attendance' user.id %}">View Records</a>
         </td>
         <td>
             {% if user.is_active %}
