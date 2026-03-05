@@ -2,6 +2,7 @@
   "python.terminal.activateEnvironment": true,
   "terminal.integrated.defaultProfile.windows": "Command Prompt",
   "python-envs.defaultEnvManager": "ms-python.python:system",
-  "python-envs.pythonProjects": []
+  "python-envs.pythonProjects": [],
+  "python.terminal.useEnvFile": true,
 }
 
