@@ -24,7 +24,6 @@ from .facial_recognition import FacialRecognitionEngine
 import json
 import numpy as np    
 from openpyxl import Workbook
-from urllib import request
 
 
 
