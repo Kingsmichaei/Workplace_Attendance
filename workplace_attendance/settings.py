@@ -22,6 +22,7 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = ['*']  # Update this with your actual domain or IP address in production
+CSRF_TRUSTED_ORIGINS = ['https://workplaceattendance-production.up.railway.app/']
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -140,15 +141,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
 STATIC_URL = '/static/'
-
-
-
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-STATICFILES_STORAGE = 'whitenoise.storage.StaticFilesStorage'
-WHITENOISE_ROOT = BASE_DIR / 'staticfiles'
 
 
