@@ -42,27 +42,12 @@ class FacialRecognitionEngine:
 
 
 
-@staticmethod
-def verify_face(known_faces, captured_face, target_label=0):
-    """
-    Train recognizer on ALL known faces.
-    Verify captured face matches ONLY the target user.
-    
-    Args:
-        known_faces: list of ALL registered face encodings in system
-        captured_face: the face image to verify
-        target_label: index of the target user in known_faces list
-    """
-    if not known_faces:
-        return False, 999
-
-    recognizer = cv2.face.LBPHFaceRecognizer_create()
-    labels = list(range(len(known_faces)))
-    recognizer.train(known_faces, np.array(labels))
-    predicted_label, confidence = recognizer.predict(captured_face)
-
-    # BOTH conditions must be true:
-    # 1. Predicted face must match target user specifically
-    # 2. Confidence must be below strict threshold
-    is_match = (predicted_label == target_label) and (confidence < 70)
-    return is_match, confidence
+   @staticmethod
+    def verify_face(known_faces, captured_face):
+        recognizer = cv2.face.LBPHFaceRecognizer_create()
+        labels = list(range(len(known_faces)))
+        recognizer.train(known_faces, np.array(labels))
+        label, confidence = recognizer.predict(captured_face)
+        # Lower confidence = better match
+        is_match = confidence < 80
+        return is_match, confidence
