@@ -33,8 +33,14 @@
         <div class="actions-dropdown">
             <button class="btn dropdown-toggle" id="actionsToggle">Actions ▼</button>
             <div class="actions-menu" id="actionsMenu">
+                
+                {% if request.user.is_superuser %}
                 <a href="{% url 'export_attendance_csv' %}" class="dropdown-item">Export CSV</a>
                 <a href="{% url 'export_attendance_excel' %}" class="dropdown-item">Export Excel</a>
+                {% else %}
+                <a href="{% url 'export_my_csv' %}" class="dropdown-item">Export CSV</a>
+                <a href="{% url 'export_my_excel' %}" class="dropdown-item">Export Excel</a>
+                {% endif %}
                 {% if request.user.is_superuser %}
                     <a class="dropdown-item" href="{% url 'attendance_summary' %}">Attendance Summary</a>
                 {% endif %}

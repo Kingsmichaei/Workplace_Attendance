@@ -283,13 +283,12 @@ def logout_view(request):
     return redirect('login')
 
 
+
 # ==================== FACIAL RECOGNITION VIEWS ====================
 
 @login_required
 def register_face(request):
     """Register or update facial data for the current user"""
-    from .models import FaceData
-    
     try:
         face_data = FaceData.objects.get(user=request.user)
     except FaceData.DoesNotExist:
@@ -309,11 +308,6 @@ def register_face(request):
 @login_required
 def capture_face_for_registration(request):
     """API endpoint to capture and store facial encoding during registration"""
-    from django.http import JsonResponse
-    from .models import FaceData
-    from .facial_recognition import FacialRecognitionEngine
-    import json
-    
     if request.method == "POST":
         try:
             data = json.loads(request.body)
@@ -373,9 +367,9 @@ def capture_face_for_registration(request):
 def facial_recognition_clock_in_out(request):
     """
     Handle facial recognition for clock in/out.
-    This view captures facial data and verifies it against stored facial data.
+    Verifies captured face against ALL registered faces in the system
+    to prevent impersonation.
     """
-   
     if request.method == "POST":
         try:
             data = json.loads(request.body)
@@ -414,43 +408,63 @@ def facial_recognition_clock_in_out(request):
             if len(captured_encodings) > 1:
                 return JsonResponse({
                     'success': False,
-                    'message': 'Multiple faces detected'
+                    'message': 'Multiple faces detected. Please ensure only your face is visible.'
                 })
 
-            # Get stored facial data for the user
+            # Check if current user has registered their face
             try:
                 face_data = request.user.face_data
+                if not face_data.face_registered:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Facial data not registered. Please register your face first.'
+                    })
             except FaceData.DoesNotExist:
                 return JsonResponse({
                     'success': False,
                     'message': 'Facial data not registered. Please register your face first.'
                 })
 
-            # Get stored encodings
-            stored_encodings = face_data.get_encodings()
-            if not stored_encodings:
+            # Get ALL registered faces in the system
+            all_face_data = FaceData.objects.filter(face_registered=True)
+
+            known_encodings = []
+            target_label = None
+
+            for index, fd in enumerate(all_face_data):
+                encoding = fd.get_encodings()
+                if encoding:
+                    known_encodings.append(np.array(encoding[0]))
+                    if fd.user == request.user:
+                        target_label = index
+
+            if target_label is None:
                 return JsonResponse({
                     'success': False,
-                    'message': 'No facial data found for this user'
+                    'message': 'Face not registered for this account. Please register your face first.'
                 })
 
-            # Convert stored encodings back to numpy arrays
-            known_encodings = [np.array(enc) for enc in stored_encodings]
+            if not known_encodings:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No facial data found in the system.'
+                })
 
-            # Verify the captured face
+            # Verify captured face against all faces with correct target label
             is_match, distance = FacialRecognitionEngine.verify_face(
                 known_encodings,
-                captured_encodings[0]
+                captured_encodings[0],
+                target_label=target_label
             )
 
             if not is_match:
                 return JsonResponse({
                     'success': False,
-                    'message': f'Facial recognition failed. Not recognized. (Distance: {distance:.2f})',
+                    'message': f'Facial recognition failed. Face not recognized. (Confidence: {distance:.2f})',
                     'distance': float(distance)
                 })
 
-            # Update attendance with facial recognition
+            # Update attendance record
             today = timezone.now().date()
             attendance, created = Attendance.objects.get_or_create(
                 user=request.user,
@@ -472,7 +486,7 @@ def facial_recognition_clock_in_out(request):
                 if not attendance.clock_in:
                     return JsonResponse({
                         'success': False,
-                        'message': 'Please clock in first'
+                        'message': 'Please clock in first before clocking out.'
                     })
 
                 attendance.clock_out = localtime(timezone.now()).time()
@@ -496,8 +510,11 @@ def facial_recognition_clock_in_out(request):
 
 @csrf_exempt
 def facial_login(request):
-    """Alternative login method using facial recognition"""
-    
+    """
+    Alternative login method using facial recognition.
+    Verifies captured face against ALL registered faces in the system
+    to prevent impersonation.
+    """
     if request.method == "POST":
         try:
             data = json.loads(request.body)
@@ -507,16 +524,23 @@ def facial_login(request):
             if not base64_image or not username:
                 return JsonResponse({
                     'success': False,
-                    'message': 'Image and username required'
+                    'message': 'Image and username are both required'
                 })
 
-            # Get the user
+            # Get the user by username
             try:
                 user = User.objects.get(username=username)
             except User.DoesNotExist:
                 return JsonResponse({
                     'success': False,
                     'message': 'User not found'
+                })
+
+            # Check if user account is active
+            if not user.is_active:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'This account is inactive. Please contact your administrator.'
                 })
 
             # Convert base64 to image
@@ -533,32 +557,53 @@ def facial_login(request):
             if not captured_encodings:
                 return JsonResponse({
                     'success': False,
-                    'message': 'No face detected'
+                    'message': 'No face detected. Please ensure your face is clearly visible.'
                 })
 
-            # Get stored facial data
+            # Check if target user has registered their face
             try:
                 face_data = user.face_data
+                if not face_data.face_registered:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'This user has not registered facial data.'
+                    })
             except FaceData.DoesNotExist:
                 return JsonResponse({
                     'success': False,
-                    'message': 'User has not registered facial data'
+                    'message': 'This user has not registered facial data.'
                 })
 
-            stored_encodings = face_data.get_encodings()
-            if not stored_encodings:
+            # Get ALL registered faces in the system
+            all_face_data = FaceData.objects.filter(face_registered=True)
+
+            known_encodings = []
+            target_label = None
+
+            for index, fd in enumerate(all_face_data):
+                encoding = fd.get_encodings()
+                if encoding:
+                    known_encodings.append(np.array(encoding[0]))
+                    if fd.user == user:
+                        target_label = index
+
+            if target_label is None:
                 return JsonResponse({
                     'success': False,
-                    'message': 'No facial data found'
+                    'message': 'Face not registered for this user.'
                 })
 
-            # Convert to numpy arrays
-            known_encodings = [np.array(enc) for enc in stored_encodings]
+            if not known_encodings:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No facial data found in the system.'
+                })
 
-            # Verify
+            # Verify captured face against all faces with correct target label
             is_match, distance = FacialRecognitionEngine.verify_face(
                 known_encodings,
-                captured_encodings[0]
+                captured_encodings[0],
+                target_label=target_label
             )
 
             if is_match:
@@ -571,7 +616,7 @@ def facial_login(request):
             else:
                 return JsonResponse({
                     'success': False,
-                    'message': f'Face not recognized'
+                    'message': 'Face not recognized. Please try again or use password login.'
                 })
 
         except Exception as e:
@@ -583,9 +628,12 @@ def facial_login(request):
     return JsonResponse({'success': False, 'message': 'Invalid request method'})
 
 
-
-
 # ==================== END OF FACIAL RECOGNITION VIEWS ====================
+
+
+
+
+
 
 # ==================== MONTHLY SUMMARY VIEWS ====================
 
