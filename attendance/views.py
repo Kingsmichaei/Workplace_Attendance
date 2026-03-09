@@ -289,6 +289,8 @@ def logout_view(request):
 @login_required
 def register_face(request):
     """Register or update facial data for the current user"""
+    from .models import FaceData
+    
     try:
         face_data = FaceData.objects.get(user=request.user)
     except FaceData.DoesNotExist:
@@ -302,10 +304,8 @@ def register_face(request):
     return render(request, 'attendance/register_face.html', {
         'face_registered': face_data.face_registered
     })
-                        
-                                                            
-                                                            
-                        
+
+
 @csrf_exempt
 @login_required
 def capture_face_for_registration(request):
@@ -590,6 +590,7 @@ def facial_login(request):
 
 
 
+
 # ==================== MONTHLY SUMMARY VIEWS ====================
 
 @login_required
@@ -655,7 +656,6 @@ def attendance_summary(request):
 
 
 
-
 @login_required
 @user_passes_test(is_admin)
 def export_attendance_csv(request):
@@ -703,4 +703,4 @@ def export_attendance_excel(request):
     
     wb.save(response)
     return response
-    
+
