@@ -41,8 +41,7 @@ class FacialRecognitionEngine:
 
 
 
-
-   @staticmethod
+@staticmethod
     def verify_face(known_faces, captured_face):
         recognizer = cv2.face.LBPHFaceRecognizer_create()
         labels = list(range(len(known_faces)))
