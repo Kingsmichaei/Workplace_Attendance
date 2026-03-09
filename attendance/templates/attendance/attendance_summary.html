@@ -1,59 +1,11 @@
+{% load static %}
 
-<div class="summary-container">
-    <h2>Attendance Summary for Today</h2>
-    
-    <div class="summary-cards">
-        <div class="summary-card">
-            <h3>Total Staff</h3>
-            <p class="summary-number">{{ total_staff }}</p>
-        </div>
-        
-        <div class="summary-card">
-            <h3>Clocked In</h3>
-            <p class="summary-number">{{ total_staff_clocked_in }}</p>
-        </div>
-        
-        <div class="summary-card">
-            <h3>Clocked Out</h3>
-            <p class="summary-number">{{ total_staff_clocked_out }}</p>
-        </div>
-        
-        <div class="summary-card">
-            <h3>Total Absent</h3>
-            <p class="summary-number">{{ total_staff_absent }}</p>
-        </div>
-    </div>
-
-   
-
-
-        <h3>Staff Personal Summaries</h3>
-        <table>
-            <tr>
-                    <th>Employee ID</th>
-                    <th>Employee Name</th>
-                    <th>Status</th>
-                    <th>Late Clock In</th>
-                    <th>Early Clock Out</th>
-            </tr>
-                {% for staff in staff_summaries %}
-                <tr>
-                    <td>{{ staff.employee_id }}</td>
-                    <td>{{ staff.full_name|default:staff.username }}</td>
-                    <td>{{ staff.status }}</td>
-                    <td>{% if staff.late %}Yes ({{ staff.clock_in }}){% else %}{% if staff.clock_in %}No ({{ staff.clock_in }}){% else %}-{% endif %}{% endif %}</td>
-                    <td>{% if staff.early %}Yes ({{ staff.clock_out }}){% else %}{% if staff.clock_out %}No ({{ staff.clock_out }}){% else %}-{% endif %}{% endif %}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="6">No staff found.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        <!-- Back Link -->
-    <a href="{% url 'dashboard' %}" class="back-link">Back to Dashboard</a>
-    
-</div>
-
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Staff Attendance</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1">
+</head>
 <style>
     .summary-container {
         padding: 20px;
@@ -63,7 +15,7 @@
 
     .summary-cards {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 20px;
         margin: 30px 0;
     }
@@ -114,7 +66,7 @@
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 12px;
+    margin-top: 12px 12px;
 }
 
 table th {
@@ -169,3 +121,64 @@ table tr:hover {
     font-size: 16px;
 }
 </style> 
+<body>
+    
+<div class="summary-container">
+    <h2>Attendance Summary for Today</h2>
+    
+    <div class="summary-cards">
+        <div class="summary-card">
+            <h3>Total Staff</h3>
+            <p class="summary-number">{{ total_staff }}</p>
+        </div>
+        
+        <div class="summary-card">
+            <h3>Clocked In</h3>
+            <p class="summary-number">{{ total_staff_clocked_in }}</p>
+        </div>
+        
+        <div class="summary-card">
+            <h3>Clocked Out</h3>
+            <p class="summary-number">{{ total_staff_clocked_out }}</p>
+        </div>
+        
+        <div class="summary-card">
+            <h3>Total Absent</h3>
+            <p class="summary-number">{{ total_staff_absent }}</p>
+        </div>
+    </div>
+
+   
+
+
+        <h3>Staff Records</h3>
+        <table>
+            <tr>
+                    <th>Employee ID</th>
+                    <th>Employee Name</th>
+                    <th>Status</th>
+                    <th>Late Clock In</th>
+                    <th>Early Clock Out</th>
+            </tr>
+                {% for staff in staff_summaries %}
+                <tr>
+                    <td>{{ staff.employee_id }}</td>
+                    <td>{{ staff.full_name|default:staff.username }}</td>
+                    <td>{{ staff.status }}</td>
+                    <td>{% if staff.late %}Yes ({{ staff.clock_in }}){% else %}{% if staff.clock_in %}No ({{ staff.clock_in }}){% else %}-{% endif %}{% endif %}</td>
+                    <td>{% if staff.early %}Yes ({{ staff.clock_out }}){% else %}{% if staff.clock_out %}No ({{ staff.clock_out }}){% else %}-{% endif %}{% endif %}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6">No staff found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <!-- Back Link -->
+    <a href="{% url 'dashboard' %}" class="back-link">Back to Dashboard</a>
+    
+</div>
+
+
+
+</body>
+</html>

@@ -22,8 +22,14 @@ urlpatterns = [
     path('update-leave-status/<int:leave_id>/<str:status>/',update_leave_status, name='update_leave_status'),
     path('cancel-leave/<int:leave_id>/', cancel_leave, name='cancel_leave'),
     path('attendance-summary/', attendance_summary, name='attendance_summary'),
-    path('export-csv/', export_attendance_csv, name='export_attendance_csv'),
-    path('export-excel/', export_attendance_excel, name='export_attendance_excel'),
+
+    ##personal export (any logged user)
+    # path('attendance/export/my/csv/',export_my_attendance_csv, name='export_my_csv'),
+    # path('attendance/export/my/excel/',export_my_attendance_excel, name='export_my_excel'),
+    
+    # admin export (superuser only)
+    path('export-csv/', export_attendance_csv, name='export-csv'),
+    path('export-excel/', export_attendance_excel, name='export-excel'),
     
     # Facial Recognition URLs
     path('register-face/', register_face, name='register_face'),

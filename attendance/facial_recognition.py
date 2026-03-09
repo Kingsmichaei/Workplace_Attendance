@@ -40,13 +40,17 @@ class FacialRecognitionEngine:
         return encodings
 
 
-
-@staticmethod
+    @staticmethod
     def verify_face(known_faces, captured_face):
+
         recognizer = cv2.face.LBPHFaceRecognizer_create()
+
         labels = list(range(len(known_faces)))
+
         recognizer.train(known_faces, np.array(labels))
+
         label, confidence = recognizer.predict(captured_face)
-        # Lower confidence = better match
-        is_match = confidence < 80
+
+        is_match = confidence < 80 
+        
         return is_match, confidence

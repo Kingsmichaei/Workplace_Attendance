@@ -81,7 +81,8 @@ def add_user(request):
             password=password,
             email=email,
             first_name=first_name,
-            last_name=last_name
+            last_name=last_name,
+            is_active=True
         )
 
     
@@ -161,7 +162,6 @@ def dashboard(request):
 
 
 
-@login_required
 @login_required
 def request_leave(request):
     # allow users to submit a leave and also view their past requests
